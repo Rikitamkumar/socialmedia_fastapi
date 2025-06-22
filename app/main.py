@@ -9,8 +9,6 @@ from psycopg2.extras import RealDictCursor
 app = FastAPI()
 
 
-my_post = [{"title": "title of post 1", "content": "content of post 1", "id":1}, {"title": "My favourit game", "content": "I love to play GTA 5", "id": 2}]
-
 class Post(BaseModel):
     title: str
     content: str
