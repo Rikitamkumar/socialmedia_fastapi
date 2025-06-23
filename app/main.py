@@ -1,15 +1,21 @@
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel
 from typing import Optional
 from random import randrange
 import psycopg2
 import time
+from sqlalchemy.orm import Session 
 from psycopg2.extras import RealDictCursor
+from . import models
+from .database import engine, get_db
+
+models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
 
 
-class Post(BaseModel):
+class Post(BaseModel):  # This model(or schema) will be used when using regular raw SQL method
     title: str
     content: str
     published: bool = True
@@ -24,15 +30,10 @@ while True:
         print("Connection Failed due to: ",e)
         time.sleep(2)
 
-# class UpdatePost(BaseModel):
-#     title: Optional[str] = None
-#     content: Optional[str] = None
-#     rating: Optional[int] = None
-
-def find_post(id):
-    for p in my_post:
-        if p['id']==id:
-            return p
+# def find_post(id):
+#     for p in my_post:
+#         if p['id']==id:
+#             return p
 
 def find_post_index(id):
 
@@ -43,17 +44,44 @@ def find_post_index(id):
 
 @app.get("/")
 async def root():
+    
+    return {"message": "This is a root page"}
 
-    cursor.execute(""" SELECT * FROM posts; """)
-    all_post = cursor.fetchall()
-    return {"date": all_post}
+@app.get("/posts")
+async def root(db: Session = Depends(get_db)):
+
+    fetch_post = db.query(models.Post).all()
+
+    # cursor.execute(""" SELECT * FROM posts; """) # using regular  raw SQL method
+    # all_post = cursor.fetchall()
+    
+    return {"date": fetch_post}
+
+#belwo route is just for testing purpose - ignore it
+@app.get("/sqlalchemy")
+def test_post(db: Session = Depends(get_db)):
+
+    posts = db.query(models.Post).all()
+    
+    return{"data": posts}
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_post(post: Post):
+def create_post(post: Post, db: Session = Depends(get_db)):
     
-    cursor.execute(""" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *  """, (post.title, post.content, post.published))
-    new_post = cursor.fetchone()
-    conn.commit()
+    # cursor.execute(""" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *  """, (post.title, post.content, post.published))
+    # new_post = cursor.fetchone()
+    # conn.commit()
+
+    # Above commented statment used the regular raw SQL method
+
+
+    new_post  = models.Post(**post.dict()) #This is the standard and preferable method, as we first convert the model (table) into a dictionary and then unpack it using operator **
+
+    # new_post  = models.Post(title = post.title, content = post.content, published = post.published)  # This is a manual way to extract the table column, but it's not preferable. 
+    
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
     return {"data":new_post}
 
 @app.get("/posts/{id}")
