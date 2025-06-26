@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app import schemas,models, utils
 from app.database import get_db
 
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users", tags=['Users'])
 
 
 @router.post("/",status_code=status.HTTP_201_CREATED ,response_model=schemas.UserOut)
@@ -12,6 +12,13 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     hashed_pwd = utils.hash(user.password)
     user.password = hashed_pwd
     new_user = models.Users(**user.dict())
+
+    existing_user = db.query(models.Users).filter(models.Users.email == user.email).first()
+
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email alreday registerd")
+
+    
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

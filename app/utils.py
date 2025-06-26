@@ -7,7 +7,10 @@ def hash(password:str):
     return pdw_context.hash(password)
 
 
+def verify_password(regular_password, hashed_password):
 
+    return pdw_context.verify(regular_password,hashed_password)
+    # return pdw_context.hash(regular_password) == hashed_password
 
 
 

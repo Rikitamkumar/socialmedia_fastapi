@@ -1,13 +1,16 @@
 from fastapi import FastAPI, Response,HTTPException,status, Depends, APIRouter
 from typing import List
 from sqlalchemy.orm import Session
-from app import models,schemas
+from app import models,schemas, OAuth2
 from app.database import get_db
 
-router = APIRouter(prefix="/posts")
+
+
+router = APIRouter(prefix="/posts", tags= ['Posts'])
+
 
 @router.get("/", response_model=List[schemas.PostOut])
-async def root(db: Session = Depends(get_db)):
+async def root(db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user)):
 
     fetch_post = db.query(models.Post).all()
 
@@ -18,7 +21,7 @@ async def root(db: Session = Depends(get_db)):
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.PostOut)
-def create_post(post: schemas.CreatePost, db: Session = Depends(get_db)):
+def create_post(post: schemas.CreatePost, db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user)):
     
     # cursor.execute(""" INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *  """, (post.title, post.content, post.published))
     # new_post = cursor.fetchone()
@@ -30,14 +33,14 @@ def create_post(post: schemas.CreatePost, db: Session = Depends(get_db)):
     new_post  = models.Post(**post.dict()) #This is the standard and preferable method, as we first convert the model (table) into a dictionary and then unpack it using operator **
 
     # new_post  = models.Post(title = post.title, content = post.content, published = post.published)  # This is a manual way to extract the table column, but it's not preferable. 
-    
+
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
     return new_post
 
 @router.get("/{id}", response_model=schemas.PostOut)
-def get_post(id: int, db: Session = Depends(get_db)):
+def get_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user)):
     
     
     # cursor.execute(""" SELECT * FROM posts WHERE id =%s""", (str(id)))
@@ -56,7 +59,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
     return fetch_post
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db)):
+def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user)):
 
     # cursor.execute(""" DELETE FROM posts where id = %s RETURNING *""",(str(id)),)
     # deleted_post = cursor.fetchone()
@@ -75,7 +78,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.put("/{id}")
-def update_post(id:int, post1: schemas.CreatePost, db: Session = Depends(get_db)):
+def update_post(id:int, post1: schemas.CreatePost, db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user)):
 
     # cursor.execute(""" UPDATE posts SET title = %s, content = %s, published = %s where id =%s RETURNING *""",(post.title,post.content, post.published,str(id)))
     # updated_post = cursor.fetchone()

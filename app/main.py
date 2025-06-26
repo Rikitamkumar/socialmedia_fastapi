@@ -9,7 +9,7 @@ from psycopg2.extras import RealDictCursor
 from app import models, schemas,utils
 from .database import engine, get_db
 
-from .routers import post, user 
+from app.routers import post, user, auth
 
 
 models.Base.metadata.create_all(bind=engine)  # It tells SQLAlchemy: Create all the tables in the database that are defined in the models — if they don’t already exist.
@@ -41,6 +41,7 @@ def find_post_index(id):
 
 app.include_router(post.router)
 app.include_router(user.router)
+app.include_router(auth.router)
 
 @app.get("/")
 async def root():
