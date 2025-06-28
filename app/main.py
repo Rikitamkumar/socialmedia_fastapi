@@ -1,13 +1,9 @@
 from fastapi import FastAPI
-from fastapi.params import Body
-from typing import Optional, List
-from random import randrange
 import psycopg2
 import time
-from sqlalchemy.orm import Session 
 from psycopg2.extras import RealDictCursor
-from app import models, schemas,utils
-from .database import engine, get_db
+from app import models
+from .database import engine
 
 from app.routers import post, user, auth
 
@@ -17,26 +13,15 @@ models.Base.metadata.create_all(bind=engine)  # It tells SQLAlchemy: Create all 
 app = FastAPI()
 
 
-while True: # Use to 
-    try:
-        conn = psycopg2.connect(host='localhost', database='socialmedia_fastapi', user= 'postgres', password ='rikitam123', cursor_factory= RealDictCursor)
-        cursor = conn.cursor()
-        print("Database connection successdull")
-        break
-    except Exception as e:
-        print("Connection Failed due to: ",e)
-        time.sleep(2)
-
-# def find_post(id):
-#     for p in my_post:
-#         if p['id']==id:
-#             return p
-
-def find_post_index(id):
-
-    for index,post in enumerate(my_post):
-        if post['id'] == id:
-            return index
+# while True: # this code does establish a connection to a PostgreSQL database using the psycopg2 library.
+#     try:
+#         conn = psycopg2.connect(host='localhost', database='socialmedia_fastapi', user= 'postgres', password ='rikitam123', cursor_factory= RealDictCursor)
+#         cursor = conn.cursor()
+#         print("Database connection successdull")
+#         break
+#     except Exception as e:
+#         print("Connection Failed due to: ",e)
+#         time.sleep(2)
 
 
 app.include_router(post.router)

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Response,HTTPException,status, Depends, APIRouter
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from app import models,schemas, OAuth2
 from app.database import get_db
@@ -10,9 +10,9 @@ router = APIRouter(prefix="/posts", tags= ['Posts'])
 
 
 @router.get("/", response_model=List[schemas.PostOut])
-async def root(db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user)):
+async def root(db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user), limit:int=8, skip: int =0, search: Optional[str] = ""):
 
-    fetch_post = db.query(models.Post).all()
+    fetch_post = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
 
     # cursor.execute(""" SELECT * FROM posts; """) # using regular  raw SQL method
     # all_post = cursor.fetchall()
@@ -30,7 +30,7 @@ def create_post(post: schemas.CreatePost, db: Session = Depends(get_db), current
     # Above commented statment used the regular raw SQL method
 
 
-    new_post  = models.Post(**post.dict()) #This is the standard and preferable method, as we first convert the model (table) into a dictionary and then unpack it using operator **
+    new_post  = models.Post(user_id= current_user.user_id,**post.dict()) #This is the standard and preferable method, as we first convert the model (table) into a dictionary and then unpack it using operator **
 
     # new_post  = models.Post(title = post.title, content = post.content, published = post.published)  # This is a manual way to extract the table column, but it's not preferable. 
 
@@ -67,13 +67,19 @@ def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depe
     
     # Above commented statment used the regular raw SQL method
 
-    post = db.query(models.Post).filter(models.Post.id == id)
+
+    post_query = db.query(models.Post).filter(models.Post.id == id)
     
+    post = post_query.first()
 
-    if post.first() == None:
+    print(current_user.user_id)
+    if post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail= f"There is no post with ID {id}")
+    
+    if current_user.user_id != post.user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail= f"You are not authorized to delete this post.")
 
-    post.delete(synchronize_session=False)
+    post_query.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -88,9 +94,13 @@ def update_post(id:int, post1: schemas.CreatePost, db: Session = Depends(get_db)
 
     post_query = db.query(models.Post).filter(models.Post.id == id)
     
-    post_temp = post_query.first()
-    if post_temp == None:
+
+    post = post_query.first()
+    if post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail= f"There is no post with ID {id}")
+    
+    if current_user.user_id != post.user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail= f"You are not authorized to update this post.")
     
     post_query.update(post1.dict(), synchronize_session=False)
 
