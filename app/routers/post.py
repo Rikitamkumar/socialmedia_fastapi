@@ -4,20 +4,25 @@ from sqlalchemy.orm import Session
 from app import models,schemas, OAuth2
 from app.database import get_db
 
+from sqlalchemy import func
 
 
 router = APIRouter(prefix="/posts", tags= ['Posts'])
 
 
-@router.get("/", response_model=List[schemas.PostOut])
-async def root(db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user), limit:int=8, skip: int =0, search: Optional[str] = ""):
+@router.get("/", response_model=List[schemas.PostWithLikes])
+async def get_post(db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user), limit:int=20, skip: int =0, search: Optional[str] = ""):
 
-    fetch_post = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    #fetch_post = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all() # without likes query
 
     # cursor.execute(""" SELECT * FROM posts; """) # using regular  raw SQL method
     # all_post = cursor.fetchall()
+
+    post = db.query(models.Post, func.count(models.Like.post_id).label('Likes')).join(models.Like,models.Like.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+
+    #results = [{"Post": post, "Likes": likes} for post, likes in post] # the above query is not reliable, so here i am converting tuple into a dict with 'post' and 'likes' keys
     
-    return fetch_post
+    return post
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.PostOut)
@@ -39,7 +44,7 @@ def create_post(post: schemas.CreatePost, db: Session = Depends(get_db), current
     db.refresh(new_post)
     return new_post
 
-@router.get("/{id}", response_model=schemas.PostOut)
+@router.get("/{id}", response_model=schemas.PostWithLikes)
 def get_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user)):
     
     
@@ -48,15 +53,17 @@ def get_post(id: int, db: Session = Depends(get_db), current_user: int = Depends
     
     # Above commented statment used the regular raw SQL method
 
-    fetch_post = db.query(models.Post).filter(models.Post.id == id).first()
+    #fetch_post = db.query(models.Post).filter(models.Post.id == id).first() # get post without likes
 
-    if not fetch_post:
+    post = db.query(models.Post, func.count(models.Like.post_id).label('Likes')).join(models.Like,models.Like.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(models.Post.id == id).first()
+
+    if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"There is no post with ID {id}")
         # response.status_code = status.HTTP_404_NOT_FOUND
         # return {"message": f"There is no post with ID {id}"}
 
 
-    return fetch_post
+    return post
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(OAuth2.get_current_user)):

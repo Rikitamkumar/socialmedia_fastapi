@@ -27,6 +27,19 @@ class Users(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
 
+class Like(Base):
+    __tablename__ ='likes'
+
+    post_id = Column(Integer, ForeignKey('posts.id', ondelete='CASCADE'), primary_key= True)
+    user_id = Column(Integer, ForeignKey('users.user_id', ondelete='CASCADE'), primary_key=True)
+
+
+
+
+
+
+
+    
 # With SQLAlchemy, updating the structure of an existing table (like adding or modifying columns) doesn’t work directly through the model.
 
 # SQLAlchemy models can reflect and interact with existing tables. But if we change a model’s structure (e.g., add a new column), SQLAlchemy won’t automatically alter the actual database schema.

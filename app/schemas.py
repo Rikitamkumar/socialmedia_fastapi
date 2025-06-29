@@ -1,7 +1,6 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
-from typing import Optional
-
+from typing import Optional, Annotated
 
 class UserCreate(BaseModel):
 
@@ -42,6 +41,14 @@ class PostOut(PostBase):
     class Config:
         from_attributes = True #allows reading from SQLAlchemy model
 
+    
+class PostWithLikes(BaseModel):
+    Post: PostOut
+    Likes: int
+
+    class Config:
+        from_attributes = True #allows reading from SQLAlchemy model
+
 
 class Token(BaseModel):
     access_token : str
@@ -49,3 +56,9 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     id : Optional[str] = None
+
+class Like(BaseModel):
+
+    post_id: int
+    
+    direction: Annotated[int, Field(le=1)]
