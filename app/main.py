@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import psycopg2
 import time
 from psycopg2.extras import RealDictCursor
@@ -10,7 +11,20 @@ from app.routers import post, user, auth,likes
 
 models.Base.metadata.create_all(bind=engine)  # It tells SQLAlchemy: Create all the tables in the database that are defined in the models — if they don’t already exist.
 
+origins = ['*']
+
 app = FastAPI()
+
+
+#CORS (Cross-Origin Resource Sharing) implementation
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # while True: # this code does establish a connection to a PostgreSQL database using the psycopg2 library.
